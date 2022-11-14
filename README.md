@@ -42,4 +42,4 @@ An example usage (add this to your supervision tree):
                   * `Nats.Serializer.Native`: Convert messages using Erlang's native serialization mechanism.
                   * `Nats.Serializer.Json`: Convert messages using Json format.
 
-
+For more details on how to use it, see the [Phoenix.PubSub documentation](https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html).
