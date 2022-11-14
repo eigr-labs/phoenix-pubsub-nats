@@ -109,7 +109,6 @@ defmodule Nats.NatsPubsub do
         {:msg, %{topic: topic, reply_to: _to, headers: headers} = event},
         %State{pubsub_name: pubsub_name, serializer: serializer} = state
       ) do
-    IO.puts("Received event #{inspect(event)}")
     current_node = to_string(node())
 
     case conver_headers_to_map(headers) do
