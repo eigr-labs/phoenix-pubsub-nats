@@ -151,7 +151,11 @@ defmodule Nats.NatsPubsub do
   defp build_headers([]), do: []
 
   defp build_headers(metadata) when is_list(metadata) do
-    Enum.map(metadata, fn {key, value} -> {Atom.to_string(key), Atom.to_string(value)} end)
+    Enum.map(metadata, fn {key, value} ->
+      key = if is_atom(key), do: Atom.to_string(key), else: key
+      value = if is_atom(value), do: Atom.to_string(value), else: value
+      {key, value}
+    end)
   end
 
   defp build_headers(_), do: []
