@@ -36,14 +36,14 @@ jobs:
           key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: Create Nats cluster
-        uses: onichandame/nats-action@master
+        uses: onichandame/nats-action@0.0.0
         with:
-          port: "4222 4223 4224" # multiple different ports will start a cluster. single port will start a single server
+          port: "4222" # multiple different ports will start a cluster. single port will start a single server
 
       - name: test connection to cluster
-        uses: onichandame/nats-client-action@master
+        uses: onichandame/nats-client-action@0.0.0
         with:
-          servers: "nats://localhost:4222 nats://localhost:4223 nats://localhost:4224"
+          servers: "nats://localhost:4222"
           cluster: "true"
 
       - name: Install deps
