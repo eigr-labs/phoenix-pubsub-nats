@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and Test OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        otp: [23]
+        elixir: [1.14]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+          experimental-otp: true
+
+      - uses: actions/cache@v1
+        id: deps-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - uses: actions/cache@v1
+        id: build-cache
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Create Nats cluster
+        uses: onichandame/nats-action@master
+        with:
+          port: "4222 4223 4224" # multiple different ports will start a cluster. single port will start a single server
+
+      - name: test connection to cluster
+        uses: onichandame/nats-client-action@master
+        with:
+          servers: "nats://localhost:4222 nats://localhost:4223 nats://localhost:4224"
+          cluster: "true"
+
+      - name: Install deps
+        run: mix deps.get
+
+      - name: Run tests
+        run: mix test
+
+      - run: mix format --check-formatted
