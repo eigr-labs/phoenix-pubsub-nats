@@ -10,6 +10,6 @@
   "makeup_erlang": {:hex, :makeup_erlang, "0.1.1", "3fcb7f09eb9d98dc4d208f49cc955a34218fc41ff6b84df7c75b3e6e533cc65f", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}], "hexpm", "174d0809e98a4ef0b3309256cbf97101c6ec01c4ab0b23e926a9e17df2077cbb"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.3.0", "9e18a119d9efc3370a3ef2a937bf0b24c088d9c4bf0ba9d7c3751d49d347d035", [:mix], [], "hexpm", "7977f183127a7cbe9346981e2f480dc04c55ffddaef746bd58debd566070eef8"},
   "nkeys": {:hex, :nkeys, "0.2.1", "c183105135de9d0c07d649f6a13e39792b095772cdbeaacf37dea4e35b647100", [:mix], [{:ed25519, "~> 1.3", [hex: :ed25519, repo: "hexpm", optional: false]}], "hexpm", "946551188bd103559e5129835f782f32ea26027d0ee7063eb6910ffd707fc1aa"},
-  "phoenix_pubsub": {:hex, :phoenix_pubsub, "2.1.2", "a4950b63ace57720b0fc1c6da083c53346b36f99021de89595cc4f026288ff51", [:mix], [], "hexpm", "45741676a94c71f9afdfed9d22d49b6856c026ff504db04e3dc03a1d86f8201c"},
+  "phoenix_pubsub": {:hex, :phoenix_pubsub, "2.1.3", "3168d78ba41835aecad272d5e8cd51aa87a7ac9eb836eabc42f6e57538e3731d", [:mix], [], "hexpm", "bba06bc1dcfd8cb086759f0edc94a8ba2bc8896d5331a1e2c2902bf8e36ee502"},
   "telemetry": {:hex, :telemetry, "1.1.0", "a589817034a27eab11144ad24d5c0f9fab1f58173274b1e9bae7074af9cbee51", [:rebar3], [], "hexpm", "b727b2a1f75614774cff2d7565b64d0dfa5bd52ba517f16543e6fc7efcc0df48"},
 }
