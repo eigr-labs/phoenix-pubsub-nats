@@ -1,5 +1,5 @@
 defmodule PhoenixPubsubNatsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest PhoenixPubsubNats
 
   alias Phoenix.PubSub
@@ -16,6 +16,7 @@ defmodule PhoenixPubsubNatsTest do
   test "broadcast complex events", config do
     event = %ComplexModule{name: "Adriano", age: 41}
     :ok = PubSub.broadcast(config.pubsub, config.topic, event)
+
     assert_receive ^event
   end
 end

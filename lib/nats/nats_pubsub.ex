@@ -7,18 +7,15 @@ defmodule Nats.NatsPubsub do
   require Logger
 
   defmodule State do
-    defstruct id: nil, pubsub_name: nil, gnat: nil, subscription: nil, serializer: nil
+    defstruct id: nil, name: nil, gnat: nil, serializer: nil
 
     @type t :: %__MODULE__{
             id: Node.t(),
-            pubsub_name: String.t(),
+            name: String.t(),
             gnat: any(),
-            subscription: String.t(),
             serializer: module()
           }
   end
-
-  @main_topic "nodes.pubsub.*"
 
   @doc false
   def start_link(opts) do
@@ -43,59 +40,62 @@ defmodule Nats.NatsPubsub do
     metadata = Keyword.put(metadata, :from, node())
     metadata = Keyword.put(metadata, :dispatcher, dispatcher)
 
-    GenServer.call(adapter_name, {:broadcast, topic, message, metadata})
+    GenServer.call(adapter_name, {:broadcast, topic, message, metadata, adapter_name})
   end
 
   ## GenServer Callbacks
   @impl true
   @doc false
-  def init(state) do
+  def init(opts) do
     Process.flag(:trap_exit, true)
-    nats_conn = Keyword.fetch!(state, :connection)
-    pubsub_name = Keyword.get(state, :adapter_name, __MODULE__)
-    serializer = Keyword.get(state, :serializer, Nats.Serializer.Native)
-    {:ok, %State{pubsub_name: pubsub_name}, {:continue, {:setup, nats_conn, serializer}}}
+    name = Keyword.fetch!(opts, :name)
+    nats_conn = Keyword.fetch!(opts, :connection)
+    serializer = Keyword.get(opts, :serializer, Nats.Serializer.Native)
+    {:ok, %State{name: name}, {:continue, {:setup, nats_conn, serializer}}}
   end
 
   @impl true
   def handle_continue({:setup, nats_conn, serializer}, state) do
-    {gnat, subscription} =
+    {:ok, gnat} =
       case Gnat.start_link(nats_conn) do
         {:ok, gnat} ->
-          subscription = sub(gnat)
-          {gnat, subscription}
+          {:ok, gnat}
 
         _ ->
           raise RuntimeError, "Could not connect to Nats with options #{inspect(nats_conn)}"
       end
 
-    {:noreply,
-     %State{state | id: node(), gnat: gnat, subscription: subscription, serializer: serializer}}
-  end
-
-  defp sub(gnat) do
-    case Gnat.sub(gnat, self(), @main_topic) do
-      {:ok, subscription} ->
-        subscription
-
-      _ ->
-        raise RuntimeError,
-              "Unable to subscribe Node #{inspect(node())} to channel #{@main_topic}"
-    end
+    {:noreply, %State{state | id: node(), gnat: gnat, serializer: serializer}}
   end
 
   @impl true
   def handle_call(
-        {:broadcast, topic, message, metadata},
+        {:broadcast, topic, message, metadata, adapter_name} = _event,
         _from,
-        %State{gnat: gnat, serializer: serializer} = state
+        %State{name: name, gnat: gnat, serializer: serializer} = state
       ) do
+    from = Keyword.get(metadata, :from, node())
+    dispatcher = Keyword.get(metadata, :dispatcher)
+    serializer_type = get_serializer_type(serializer)
     headers = build_headers(metadata)
 
+    headers =
+      (headers ++ [{"serializer_type", serializer_type}])
+      |> List.flatten()
+
+    msg = %{
+      dispatcher: dispatcher,
+      from: to_string(from),
+      name: name,
+      payload: message,
+      pubsub_name: adapter_name
+    }
+
     res =
-      case serializer.encode(message) do
+      case serializer.encode(msg) do
         {:ok, payload} ->
-          Gnat.pub(gnat, "nodes.pubsub.#{topic}", payload, headers: headers)
+          topic = "nodes.pubsub.#{topic}"
+          Gnat.pub(gnat, topic, payload, headers: headers)
 
         _ ->
           :error
@@ -105,38 +105,6 @@ defmodule Nats.NatsPubsub do
   end
 
   @impl true
-  def handle_info(
-        {:msg, %{topic: topic, reply_to: _to, headers: headers} = event},
-        %State{pubsub_name: pubsub_name, serializer: serializer} = state
-      ) do
-    current_node = to_string(node())
-
-    case conver_headers_to_map(headers) do
-      %{target: target}
-      when not is_nil(target) and target != current_node ->
-        # Direct broadcast and this is not the destination node.
-        :ok
-
-      %{from: ^current_node} ->
-        # This node is the source, nothing to do, because local dispatch already
-        # happened.
-        :ok
-
-      %{dispatcher: dispatcher} ->
-        real_topic = get_real_topic(topic)
-        payload = decode(serializer, event)
-
-        Phoenix.PubSub.local_broadcast(
-          pubsub_name,
-          real_topic,
-          payload,
-          maybe_convert_to_existing_atom(dispatcher)
-        )
-    end
-
-    {:noreply, state}
-  end
-
   def handle_info(event, state) do
     Logger.warning("An unexpected event has occurred. Event: #{inspect(event)}")
     {:noreply, state}
@@ -145,6 +113,16 @@ defmodule Nats.NatsPubsub do
   @impl true
   def terminate(reason, _state) do
     Logger.warning("#{inspect(__MODULE__)} terminate with reason: #{inspect(reason)}")
+  end
+
+  defp get_serializer_type(serializer) do
+    case serializer do
+      Nats.Serializer.Json ->
+        "json"
+
+      _ ->
+        "native"
+    end
   end
 
   defp build_headers([]), do: []
@@ -158,25 +136,4 @@ defmodule Nats.NatsPubsub do
   end
 
   defp build_headers(_), do: []
-
-  defp decode(serializer, %{body: body} = event) do
-    case serializer.decode(body) do
-      {:ok, payload} ->
-        payload
-
-      _ ->
-        raise ArgumentError, "Could not deserialize event: #{inspect(event)}"
-    end
-  end
-
-  defp get_real_topic(topic) do
-    String.replace(topic, "nodes.pubsub.", "")
-  end
-
-  defp conver_headers_to_map(headers), do: Enum.into(headers, %{})
-
-  defp maybe_convert_to_existing_atom(string) when is_binary(string),
-    do: String.to_existing_atom(string)
-
-  defp maybe_convert_to_existing_atom(atom) when is_atom(atom), do: atom
 end

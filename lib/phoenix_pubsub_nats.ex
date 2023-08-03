@@ -40,17 +40,32 @@ defmodule PhoenixPubsubNats do
   defdelegate direct_broadcast(adapter_name, node_name, topic, message, dispatcher),
     to: Nats.NatsPubsub
 
-  @doc false
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @impl true
   def init(opts) do
+    connection_name = Module.concat(__MODULE__, "Connection")
+
     children = [
+      {Gnat.ConnectionSupervisor, connection_settings(connection_name, opts)},
+      {Nats.ConsumerSupervisor, opts},
       {Nats.NatsPubsub, opts}
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)
+  end
+
+  defp connection_settings(name, opts) do
+    nats_conn = Keyword.fetch!(opts, :connection)
+
+    %{
+      name: name,
+      backoff_period: 3000,
+      connection_settings: [
+        nats_conn
+      ]
+    }
   end
 end
