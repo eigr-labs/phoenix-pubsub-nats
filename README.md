@@ -10,7 +10,7 @@ by adding `phoenix_pubsub_nats` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:phoenix_pubsub_nats, "~> 0.1.0"}
+    {:phoenix_pubsub_nats, "~> 0.2.1"}
   ]
 end
 ```
