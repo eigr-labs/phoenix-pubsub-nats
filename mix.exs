@@ -2,7 +2,7 @@ defmodule PhoenixPubsubNats.MixProject do
   use Mix.Project
 
   @app :phoenix_pubsub_nats
-  @version "0.2.1"
+  @version "0.2.2"
   @source_url "https://github.com/eigr-labs/phoenix-pubsub-nats.git"
 
   def project do
