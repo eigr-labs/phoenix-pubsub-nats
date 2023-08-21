@@ -3,7 +3,7 @@ defmodule Nats.ConsumerSupervisor do
   use Supervisor
   require Logger
 
-  @main_topic "nodes.pubsub.*"
+  @main_topic "nodes.pubsub.>"
 
   def start_link(state) do
     Supervisor.start_link(__MODULE__, state, name: __MODULE__)
