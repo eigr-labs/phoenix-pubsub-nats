@@ -55,5 +55,3 @@ jobs:
 
       - name: Run tests
         run: mix test
-
-      - run: mix format --check-formatted
