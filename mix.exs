@@ -2,7 +2,7 @@ defmodule PhoenixPubsubNats.MixProject do
   use Mix.Project
 
   @app :phoenix_pubsub_nats
-  @version "0.2.2"
+  @version "0.2.3"
   @source_url "https://github.com/eigr-labs/phoenix-pubsub-nats.git"
 
   def project do
@@ -51,7 +51,7 @@ defmodule PhoenixPubsubNats.MixProject do
     [
       {:jason, "~> 1.3"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:gnat, "~> 1.6"},
+      {:gnat, "~> 1.10"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
