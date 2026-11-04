@@ -49,23 +49,10 @@ defmodule Nats.NatsPubsub do
   def init(opts) do
     Process.flag(:trap_exit, true)
     name = Keyword.fetch!(opts, :name)
-    nats_conn = Keyword.fetch!(opts, :connection)
     serializer = Keyword.get(opts, :serializer, Nats.Serializer.Native)
-    {:ok, %State{name: name}, {:continue, {:setup, nats_conn, serializer}}}
-  end
-
-  @impl true
-  def handle_continue({:setup, nats_conn, serializer}, state) do
-    {:ok, gnat} =
-      case Gnat.start_link(nats_conn) do
-        {:ok, gnat} ->
-          {:ok, gnat}
-
-        _ ->
-          raise RuntimeError, "Could not connect to Nats with options #{inspect(nats_conn)}"
-      end
-
-    {:noreply, %State{state | id: node(), gnat: gnat, serializer: serializer}}
+    # The connection `PhoenixPubsubNats` supervises: it reconnects after NATS goes away.
+    gnat = PhoenixPubsubNats.Connection
+    {:ok, %State{id: node(), name: name, gnat: gnat, serializer: serializer}}
   end
 
   @impl true
@@ -95,7 +82,7 @@ defmodule Nats.NatsPubsub do
       case serializer.encode(msg) do
         {:ok, payload} ->
           topic = "nodes.pubsub.#{topic}"
-          Gnat.pub(gnat, topic, payload, headers: headers)
+          try_publish(gnat, topic, payload, headers)
 
         _ ->
           :error
@@ -113,6 +100,17 @@ defmodule Nats.NatsPubsub do
   @impl true
   def terminate(reason, _state) do
     Logger.warning("#{inspect(__MODULE__)} terminate with reason: #{inspect(reason)}")
+  end
+
+  # No connection is registered while it reconnects, and one that drops
+  # during the call exits too. Either way `GenServer.call` exits. Its
+  # arguments carry the message, so only the reason is logged.
+  defp try_publish(gnat, topic, payload, headers) do
+    Gnat.pub(gnat, topic, payload, headers: headers)
+  catch
+    :exit, {reason, {GenServer, :call, _args}} ->
+      Logger.error("Failed to publish broadcast to NATS: #{inspect(reason)}")
+      :ok
   end
 
   defp get_serializer_type(serializer) do
